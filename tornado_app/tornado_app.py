@@ -6,10 +6,13 @@ import tornado.ioloop
 import tornado.options
 import tornado.httpclient
 import tornado.websocket
+import tornado.gen
 import pymongo
+import motor.motor_tornado
 import json
 
-conn = pymongo.MongoClient(host='zannb.site', port=27017)
+# conn = pymongo.MongoClient(host='zannb.site', port=27017)
+dbClient = motor.motor_tornado.MotorClient('zannb.site', 27017)
 
 
 class IndexHandler(tornado.web.RequestHandler):
@@ -18,20 +21,22 @@ class IndexHandler(tornado.web.RequestHandler):
 
 
 class UserHandler(tornado.web.RequestHandler):
+    @tornado.gen.coroutine
     def post(self):
         username = self.get_argument("username")
         password = self.get_argument("password")
-        db = conn.Tornado
-        result = db.account.find({"username": username})
+        db = dbClient.Tornado
+        cursor = db.account.find({"username": username})
         try:
-            if result[0]['password'] == password:
-                self.redirect("/")
-                return
-            else:
-                self.render("log_error.html")
-                return
+            for result in (yield cursor.to_list(length=10)):
+                if result['password'] == password:
+                    self.redirect("/")
+                    return
+                else:
+                    self.write("log_error.html")
+                    return
         except IndexError:
-            self.render("log_error.html")
+            self.write("log_error.html")
             return
 
 
