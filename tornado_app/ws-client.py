@@ -1,7 +1,7 @@
 """
 
 Usage:
-    ws-client.py <ws_address>
+    wsclient.py <ip> <port> <dir>
 
 """
 from docopt import docopt
@@ -18,7 +18,12 @@ def rec():
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-    ws = create_connection(arguments['<ws_address>'])
+    address = 'ws://{}:{}/{}'.format(
+        arguments['<ip>'],
+        arguments['<port>'],
+        arguments['<dir>']
+    )
+    ws = create_connection(address)
     t = threading.Thread(target=rec)
     t.start()
     # print('sending hello')

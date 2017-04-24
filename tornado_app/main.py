@@ -1,14 +1,12 @@
-import os.path
+import os
 
-import tornado.httpserver
+import tornado
 import tornado.web
-import tornado.ioloop
-import tornado.options
-import tornado.httpclient
-import tornado.websocket
 import tornado.gen
-import pymongo
-import motor.motor_tornado
+import tornado.websocket
+import tornado.ioloop
+import tornado.template
+import motor
 import json
 
 # conn = pymongo.MongoClient(host='zannb.site', port=27017)
@@ -40,9 +38,33 @@ class UserHandler(tornado.web.RequestHandler):
             return
 
 
+class LogInHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.render('login.html')
+
+
+class ShowIPHandler(tornado.websocket.WebSocketHandler):
+    def get(self):
+        SocketHandler.send_to_all({
+            'require_ip': True
+        })
+
+    @classmethod
+    def on_response(cls, message):
+        cls.render('show_ip.html',data=message)
+
+
+class ControlPanelHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.render("control_panel.html")
+
+
 class SocketHandler(tornado.websocket.WebSocketHandler):
     """docstring for SocketHandler"""
     clients = set()
+
+    def check_origin(self,origin):
+        return True
 
     @staticmethod
     def send_to_all(message):
@@ -68,6 +90,13 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         })
 
     def on_message(self, message):
+        try:
+            d_message = json.loads(message)
+        except json.decoder.JSONDecodeError:
+            d_message=message
+        if 'send_ip' in d_message:
+            ShowIPHandler.get(d_message['data'])
+            return
         SocketHandler.send_to_all({
             'type': 'user',
             'id': id(self),
@@ -76,18 +105,25 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
 
         # #MAIN
 
+# class TemplatesHandler(tornado.web.RequestHandler):
+#     def get(self):
+#         self.render()
 
 if __name__ == '__main__':
     app = tornado.web.Application(
         handlers=[
             (r"/", IndexHandler),
+            (r"/index", IndexHandler),
+            (r"/control_panel", ControlPanelHandler),
             (r"/chat", SocketHandler),
-            (r"/user", UserHandler)
+            (r"/user", UserHandler),
+            (r"/myrasp", ShowIPHandler),
+            (r'/login', LogInHandler)
         ],
         debug=True,
         autoreload=True,
         template_path=os.path.join(os.path.dirname(__file__), "templates"),
         static_path=os.path.join(os.path.dirname(__file__), "static")
     )
-    app.listen(12345)
+    app.listen(9999)
     tornado.ioloop.IOLoop.instance().start()
