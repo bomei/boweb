@@ -45,13 +45,18 @@ class LogInHandler(tornado.web.RequestHandler):
 
 class ShowIPHandler(tornado.websocket.WebSocketHandler):
     def get(self):
-        SocketHandler.send_to_all({
-            'require_ip': True
-        })
+        try:
+            ip_m=self.get_argument('ip_message')
+            if len(ip_m)>0:
+                self.render('show_ip.html',rasp_id=ip_m)
+        except tornado.web.MissingArgumentError:
+            SocketHandler.send_to_all({
+                'require_ip': True
+            })
 
     @classmethod
     def on_response(cls, message):
-        cls.render('show_ip.html',data=message)
+        cls.render('show_ip.html', rasp_id=message)
 
 
 class ControlPanelHandler(tornado.web.RequestHandler):
@@ -63,7 +68,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
     """docstring for SocketHandler"""
     clients = set()
 
-    def check_origin(self,origin):
+    def check_origin(self, origin):
         return True
 
     @staticmethod
@@ -93,9 +98,11 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         try:
             d_message = json.loads(message)
         except json.decoder.JSONDecodeError:
-            d_message=message
+            d_message = message
+        if 'heartbeat' in d_message:
+            return
         if 'send_ip' in d_message:
-            ShowIPHandler.get(d_message['data'])
+            self.redirect('/myrasp?ip_message='+message)
             return
         SocketHandler.send_to_all({
             'type': 'user',
@@ -104,6 +111,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         })
 
         # #MAIN
+
 
 # class TemplatesHandler(tornado.web.RequestHandler):
 #     def get(self):
