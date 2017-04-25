@@ -15,7 +15,7 @@ dbClient = motor.motor_tornado.MotorClient('zannb.site', 27017)
 
 class IndexHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render("index.html")
+        self.render("index.html", log_in_already=False)
 
 
 class UserHandler(tornado.web.RequestHandler):
@@ -38,6 +38,24 @@ class UserHandler(tornado.web.RequestHandler):
             return
 
 
+class SignUpHandler(tornado.web.RequestHandler):
+    @tornado.gen.coroutine
+    def get(self):
+        self.render('signup.html')
+
+    def post(self):
+        username = self.get_argument("username")
+        password1 = self.get_argument("password1")
+        password2 = self.get_argument("password2")
+        if password1 == password2:
+            db=dbClient.Tornado
+            db.account.insert({
+                'username':username,
+                'password':password1
+            })
+        else:
+            self.render()
+
 class LogInHandler(tornado.web.RequestHandler):
     def get(self):
         self.render('login.html')
@@ -46,9 +64,9 @@ class LogInHandler(tornado.web.RequestHandler):
 class ShowIPHandler(tornado.websocket.WebSocketHandler):
     def get(self):
         try:
-            ip_m=self.get_argument('ip_message')
-            if len(ip_m)>0:
-                self.render('show_ip.html',rasp_id=ip_m)
+            ip_m = '0.0.0.0'
+            if len(ip_m) > 0:
+                self.render('show_ip.html', rasp_id=ip_m)
         except tornado.web.MissingArgumentError:
             SocketHandler.send_to_all({
                 'require_ip': True
@@ -102,7 +120,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         if 'heartbeat' in d_message:
             return
         if 'send_ip' in d_message:
-            self.redirect('/myrasp?ip_message='+message)
+            self.redirect('/myrasp?ip_message=' + message)
             return
         SocketHandler.send_to_all({
             'type': 'user',
@@ -126,7 +144,8 @@ if __name__ == '__main__':
             (r"/chat", SocketHandler),
             (r"/user", UserHandler),
             (r"/myrasp", ShowIPHandler),
-            (r'/login', LogInHandler)
+            (r'/login', LogInHandler),
+            (r'/signup',SignUpHandler)
         ],
         debug=True,
         autoreload=True,

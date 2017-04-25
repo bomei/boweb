@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+    <title>Sign UP</title>
+    <link rel="icon" href="../static/favicon.ico" type="image/x-icon" />
+    <link rel="shortcut icon" href="../static/favicon.ico" type="image/x-icon" />
+    <style type="text/css">
+        .green {
+            color:green;
+        }
+
+        .red{
+            color:red;
+        }
+    </style>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript"
+            src="http://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        function validate() {
+//            var pwd1 = $("#pwd1").value;
+            var pwd1 = document.getElementById("pwd1").value;
+            var pwd2 = $("#pwd2")[0].value;
+
+            if (pwd1==pwd2) {
+                $("#suggestion").html("<span class='green'>Password OK</span>");
+                $("#submit").disabled =false;
+            }
+            else{
+                $("#suggestion").html("<span class='red'>Password Not Same</span>");
+                $("#submit").disabled =true;
+            }
+        }
+    </script>
+</head>
+<body>
+<div>
+    <h2>Sign UP</h2>
+    <form  method="post" action="/signup">
+        <p>Username:<br><input  name="username" type="text" value="Email/Username"></p>
+        <p>Password:<br><input id="pwd1" name="password1" type="password" value="text"></p>
+        <p>Password again:<br><input id="pwd2" name="password2" type="password" value="text" onkeyup="validate()"></p>
+        <p id="suggestion"></p>
+        <input type="submit" id="submit" value="SIGN UP">
+    </form>
+
+
+    <br>
+
+
+</div>
+
+</body>
+</html>
