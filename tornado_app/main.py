@@ -13,12 +13,46 @@ import json
 dbClient = motor.motor_tornado.MotorClient('zannb.site', 27017)
 
 
-class IndexHandler(tornado.web.RequestHandler):
+class BaseHandler(tornado.web.RequestHandler):
+    def get_current_user(self):
+        return self.get_secure_cookie('username')
+
+
+class IndexHandler(BaseHandler):
     def get(self):
-        self.render("index.html", log_in_already=False)
+        log_in_already=False
+        if self.get_secure_cookie('username'):
+            log_in_already=True
+        self.render("index.html", log_in_already=log_in_already)
 
 
-class UserHandler(tornado.web.RequestHandler):
+class UserHandler(BaseHandler):
+    pass
+
+
+class SignUpHandler(BaseHandler):
+    @tornado.gen.coroutine
+    def get(self):
+        self.render('signup.html')
+
+    def post(self):
+        username = self.get_argument("username")
+        password1 = self.get_argument("password1")
+        password2 = self.get_argument("password2")
+        if password1 == password2:
+            db = dbClient.Tornado
+            db.account.insert({
+                'username': username,
+                'password': password1
+            })
+        else:
+            self.render()
+
+
+class LogInHandler(BaseHandler):
+    def get(self):
+        self.render('login.html')
+
     @tornado.gen.coroutine
     def post(self):
         username = self.get_argument("username")
@@ -28,6 +62,7 @@ class UserHandler(tornado.web.RequestHandler):
         try:
             for result in (yield cursor.to_list(length=10)):
                 if result['password'] == password:
+                    self.set_secure_cookie('username',username)
                     self.redirect("/")
                     return
                 else:
@@ -38,27 +73,13 @@ class UserHandler(tornado.web.RequestHandler):
             return
 
 
-class SignUpHandler(tornado.web.RequestHandler):
-    @tornado.gen.coroutine
+class LogOutHandler(BaseHandler):
     def get(self):
-        self.render('signup.html')
-
-    def post(self):
-        username = self.get_argument("username")
-        password1 = self.get_argument("password1")
-        password2 = self.get_argument("password2")
-        if password1 == password2:
-            db=dbClient.Tornado
-            db.account.insert({
-                'username':username,
-                'password':password1
-            })
-        else:
-            self.render()
-
-class LogInHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.render('login.html')
+        self.clear_cookie('username')
+        self.redirect('/')
+        if self.get_argument('logout', None):
+            self.clear_cookie('username')
+            self.redirect('/')
 
 
 class ShowIPHandler(tornado.websocket.WebSocketHandler):
@@ -72,27 +93,29 @@ class ShowIPHandler(tornado.websocket.WebSocketHandler):
                 'require_ip': True
             })
 
-    @classmethod
-    def on_response(cls, message):
-        cls.render('show_ip.html', rasp_id=message)
 
-
-class ControlPanelHandler(tornado.web.RequestHandler):
+class ControlPanelHandler(BaseHandler):
+    @tornado.web.authenticated
     def get(self):
         self.render("control_panel.html")
 
 
 class SocketHandler(tornado.websocket.WebSocketHandler):
     """docstring for SocketHandler"""
-    clients = set()
+    clients = dict()
 
     def check_origin(self, origin):
         return True
 
     @staticmethod
     def send_to_all(message):
-        for c in SocketHandler.clients:
-            c.write_message(json.dumps(message))
+        for k,v in SocketHandler.clients.items():
+            for c in v:
+                c.write_message(json.dumps(message))
+
+    def register(self, newer):
+        pass
+
 
     def open(self):
         self.write_message(json.dumps({
@@ -136,6 +159,16 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
 #         self.render()
 
 if __name__ == '__main__':
+    settings = {
+        "template_path": os.path.join(os.path.dirname(__file__), "templates"),
+        'static_path': os.path.join(os.path.dirname(__file__), "static"),
+        "cookie_secret": "bobo=",
+        "xsrf_cookies": True,
+        "login_url": "/login",
+        'debug': True,
+        'autoreload': True
+    }
+
     app = tornado.web.Application(
         handlers=[
             (r"/", IndexHandler),
@@ -145,12 +178,10 @@ if __name__ == '__main__':
             (r"/user", UserHandler),
             (r"/myrasp", ShowIPHandler),
             (r'/login', LogInHandler),
-            (r'/signup',SignUpHandler)
+            (r'/logout', LogOutHandler),
+            (r'/signup', SignUpHandler)
         ],
-        debug=True,
-        autoreload=True,
-        template_path=os.path.join(os.path.dirname(__file__), "templates"),
-        static_path=os.path.join(os.path.dirname(__file__), "static")
+        **settings
     )
     app.listen(9999)
     tornado.ioloop.IOLoop.instance().start()

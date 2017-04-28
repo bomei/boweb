@@ -23,7 +23,8 @@
 <body>
     <div>
     <h2>LOG IN</h2>
-        <form  method="post" action="/user">
+        <form  method="post" action="/login">
+            {% raw xsrf_form_html() %}
             <p>Username:<br><input name="username" type="text" value="Email/Username"></p>
             <p>Password:<br><input name="password" type="text" value="Password"></p>
             <input type="submit" value="LOG IN">

@@ -23,9 +23,14 @@
 <div class="new">
     <p>
         <h1>Welcome to BOBOKA</h1>
-        <strong>Please Log in/Sign up!</strong><br>
-        <a href="/login"><button>Log in</button></a>
-        <a href="/signup"><button>Sign up</button></a>
+        {% if log_in_already %}
+            <strong>Happy!</strong><br>
+            <a href="/logout"><button>Log out</button></a>
+        {% else %}
+            <strong>Please Log in/Sign up!</strong><br>
+            <a href="/login"><button>Log in</button></a>
+            <a href="/signup"><button>Sign up</button></a>
+        {% end %}
     </p>
 </div>
 </body>
