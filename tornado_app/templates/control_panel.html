@@ -3,8 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <title>Control</title>
+    <script type="text/javascript" src="https://cdn.goeasy.io/goeasy.js"></script>
+    <style type="text/css">
+        .kind-box{
+            height: 100px;
+            border: 1px solid #FFF111;
+            width: 100px;
+        }
+    </style>
+    <script type="text/javascript">
+        function add_new(){
+
+        }
+    </script>
 </head>
 <body>
-    <p>LED:<input type="checkbox"></p>
+    <div class="kinds">
+        <span class="kind-box">LED</span>
+        <span class="kind-box">SPEAKER</span>
+        <span class="kind-box">CURVE</span>
+        <span class="kind-box">HEATER</span>
+    </div>
+    <div id="add-new">
+        <input id="new-no"><br>
+        <button id="new-button" onclick="add_new()"></button>
+    </div>
+    <div>
+        <a name="led"></a>
+        <div id="led_box"></div>
+        <a name="speaker"></a>
+        <div id="speaker_box"></div>
+        <a name="curve"></a>
+        <div id="curve_box"></div>
+        <a name="heater"></a>
+        <div id="heater_box"></div>
+    </div>
 </body>
 </html>

@@ -20,9 +20,9 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class IndexHandler(BaseHandler):
     def get(self):
-        log_in_already=False
+        log_in_already = False
         if self.get_secure_cookie('username'):
-            log_in_already=True
+            log_in_already = True
         self.render("index.html", log_in_already=log_in_already)
 
 
@@ -33,20 +33,24 @@ class UserHandler(BaseHandler):
 class SignUpHandler(BaseHandler):
     @tornado.gen.coroutine
     def get(self):
-        self.render('signup.html')
+        self.render('signup.html',username_used=False)
 
+    @tornado.gen.coroutine
     def post(self):
         username = self.get_argument("username")
         password1 = self.get_argument("password1")
         password2 = self.get_argument("password2")
-        if password1 == password2:
+        cursor = dbClient.Tornado.account.find({'username':username})
+        doc = yield cursor.to_list(None)
+        if len(doc)==0:
             db = dbClient.Tornado
             db.account.insert({
                 'username': username,
                 'password': password1
             })
+            self.redirect('/')
         else:
-            self.render()
+            self.render('signup.html', username_used=True)
 
 
 class LogInHandler(BaseHandler):
@@ -62,7 +66,7 @@ class LogInHandler(BaseHandler):
         try:
             for result in (yield cursor.to_list(length=10)):
                 if result['password'] == password:
-                    self.set_secure_cookie('username',username)
+                    self.set_secure_cookie('username', username)
                     self.redirect("/")
                     return
                 else:
@@ -102,20 +106,19 @@ class ControlPanelHandler(BaseHandler):
 
 class SocketHandler(tornado.websocket.WebSocketHandler):
     """docstring for SocketHandler"""
-    clients = dict()
+    clients = set()
 
     def check_origin(self, origin):
         return True
 
     @staticmethod
     def send_to_all(message):
-        for k,v in SocketHandler.clients.items():
+        for k, v in SocketHandler.clients.items():
             for c in v:
                 c.write_message(json.dumps(message))
 
     def register(self, newer):
         pass
-
 
     def open(self):
         self.write_message(json.dumps({
@@ -154,9 +157,23 @@ class SocketHandler(tornado.websocket.WebSocketHandler):
         # #MAIN
 
 
-# class TemplatesHandler(tornado.web.RequestHandler):
-#     def get(self):
-#         self.render()
+class GoeasyHandler(tornado.web.RequestHandler):
+    def get(self):
+        username = self.get_argument('username', None)
+        no = self.get_argument('no', None)
+        self.no_handler(no,username)
+
+    @staticmethod
+    def no_handler(no: str, username: str):
+        if no is not None and username is not None:
+            if no.startswith('led'):
+                cursor = dbClient.Tornado[username]
+                cursor.insert({
+                    'kind': 'led',
+                    'no': no,
+                    'symbol': 'equipments'
+                })
+
 
 if __name__ == '__main__':
     settings = {
@@ -179,7 +196,8 @@ if __name__ == '__main__':
             (r"/myrasp", ShowIPHandler),
             (r'/login', LogInHandler),
             (r'/logout', LogOutHandler),
-            (r'/signup', SignUpHandler)
+            (r'/signup', SignUpHandler),
+            (r'/goeasy', GoeasyHandler)
         ],
         **settings
     )
