@@ -238,7 +238,8 @@ class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
             'message': str(id(self)) + ' has left',
         })
 
-    async def on_message(self, message):
+    @tornado.gen.coroutine
+    def on_message(self, message):
         try:
             d_message = json.loads(message)
             action = d_message['action']
@@ -257,7 +258,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
                     no = d_message['no']
                     if no not in SocketHandler.clients_no:
                         SocketHandler.clients_no[no] = self
-                    await self.client_refresh(no)
+                    yield self.client_refresh(no)
                 else:
                     user=self.get_current_user().decode()
                     self.add_to_group(user)
