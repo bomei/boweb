@@ -25,8 +25,16 @@
     <h2>LOG IN</h2>
         <form  method="post" action="/login">
             {% raw xsrf_form_html() %}
-            <p>Username:<br><input name="username" type="text" value="Email/Username"></p>
-            <p>Password:<br><input name="password" type="text" value="Password"></p>
+            <p>Username:<br>
+                <input name="username" type="text" value="Email/Username"
+                       onfocus="if(value=='Email/Username'){value=''}"
+                       onblur="if(value==''){value='Email/Username'}">
+            </p>
+            <p>Password:<br>
+                <input name="password" type="text" value="Password"
+                       onfocus="if(value=='Email/Username'){value=''}"
+                       onblur="if(value==''){value='Email/Username'}">
+            </p>
             <input type="submit" value="LOG IN">
         </form>
         <br>

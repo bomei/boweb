@@ -3,39 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <title>Control</title>
-    <script type="text/javascript" src="https://cdn.goeasy.io/goeasy.js"></script>
+    {% module Template('script_ref.html')%}
     <style type="text/css">
-        .kind-box{
-            height: 100px;
-            border: 1px solid #FFF111;
-            width: 100px;
-        }
+        /*.kind-box{*/
+            /*height: 100px;*/
+            /*border: 1px solid #FFF111;*/
+            /*width: 100px;*/
+        /*}*/
     </style>
     <script type="text/javascript">
+        function get_xsrf() {
+            return $("input[name='_xsrf']").val();
+        }
+
         function add_new(){
+            var no = $("#new-no").val();
+            var _xsrf=get_xsrf();
+            $.post("/equipment", {'no':no, 'action':'add','_xsrf':_xsrf}, function (data, status) {
+                if(status == 'success'){
+                    $("#result").html(data);
+                    query_and_show();
+                }
+                else{
+                    alert('Ajax失败');
+                }
+            });
 
         }
+        function led_handler(no) {
+            $("#action-msg").html(no+' trigger');
+
+        }
+        function query_and_show_led() {
+            $.post("/equipment", {'action':'query','_xsrf':get_xsrf(),'kind':'led'},function (data, status) {
+                if (status == 'success') {
+                    data = JSON.parse(data);
+                    var html='';
+                    for(var l in data){
+                        html+='<li>'
+                            +JSON.stringify(data[l])
+                            +'<input type="checkbox" class="led-check" onclick="led_handler('+string(data[l]["no"])+')">'
+                            +'</li>';
+                    }
+                    $("#led_box").html(html);
+                }
+            });
+        }
+        function query_and_show() {
+            query_and_show_led();
+        }
+
+        $(document).ready(function () {
+            query_and_show();
+        })
     </script>
 </head>
 <body>
     <div class="kinds">
-        <span class="kind-box">LED</span>
-        <span class="kind-box">SPEAKER</span>
-        <span class="kind-box">CURVE</span>
-        <span class="kind-box">HEATER</span>
+        <a href="#led" class="kind-box">LED</a>
+        <a href="#speaker" class="kind-box">SPEAKER</a>
+        <a href="#curve" class="kind-box">CURVE</a>
+        <a href="#heater" class="kind-box">HEATER</a>
     </div>
+    <br>
     <div id="add-new">
-        <input id="new-no"><br>
-        <button id="new-button" onclick="add_new()"></button>
+        {% raw xsrf_form_html() %}
+        <input id="new-no">
+        <button id="new-button" onclick="add_new()">ADD NEW!</button>
+        <p id="result"></p>
+    </div>
+    <br>
+    <div>
+        <strong>actions:</strong><span id="action-msg"></span>
     </div>
     <div>
+        <a name="rasp"></a>
+        <strong>RASP</strong>
+        <div id="rasp_box"></div>
         <a name="led"></a>
+        <strong>LED</strong>
         <div id="led_box"></div>
         <a name="speaker"></a>
+        <strong>SPEAKER</strong>
         <div id="speaker_box"></div>
         <a name="curve"></a>
+        <strong>CURVE</strong>
         <div id="curve_box"></div>
         <a name="heater"></a>
+        <strong>HEATER</strong>
         <div id="heater_box"></div>
     </div>
 </body>

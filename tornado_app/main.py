@@ -30,19 +30,66 @@ class UserHandler(BaseHandler):
     pass
 
 
+class EquipmentHandler(BaseHandler):
+    @tornado.web.authenticated
+    async def post(self):
+        db = dbClient.Tornado
+        action = self.get_argument('action', None)
+        if action is not None:
+            user = self.get_secure_cookie('username').decode()
+            if action == 'add':
+                no = self.get_argument('no')
+                r = await self.add_new_to_user(no, user)
+                if r == 'success':
+                    self.write('add {} to {} success'.format(no, user))
+                elif r=='used':
+                    self.write('{} has been activated'.format(no))
+
+            elif action == 'query':
+                kind=self.get_argument('kind')
+                cursor = db[user].find({'kind':kind})
+                doc=await cursor.to_list(None)
+                if len(doc) > 0:
+                    for each in doc:
+                        each.pop('_id')
+                    self.write(json.dumps(doc))
+                else:
+                    self.write('No')
+
+    async def add_new_to_user(self, no, user):
+        user = user if isinstance(user,str) else user.decode()
+        db = dbClient.Tornado
+        cursor = db.equipment.find({'no': no})
+        doc = await cursor.to_list(None)
+        if len(doc) == 0:
+            db.equipment.insert({
+                'no': no,
+                'user': user,
+                'kind':no.split('.')[0]
+            })
+            db[user].insert({
+                'no': no,
+                'symbol': 'equipments',
+                'kind': no.split('.')[0]
+            })
+            return 'success'
+        else:
+            return 'used'
+
+
 class SignUpHandler(BaseHandler):
     @tornado.gen.coroutine
     def get(self):
-        self.render('signup.html',username_used=False)
+        self.render('signup.html', username_used=False)
 
     @tornado.gen.coroutine
     def post(self):
         username = self.get_argument("username")
         password1 = self.get_argument("password1")
         password2 = self.get_argument("password2")
-        cursor = dbClient.Tornado.account.find({'username':username})
+        cursor = dbClient.Tornado.account.find({'username': username})
         doc = yield cursor.to_list(None)
-        if len(doc)==0:
+        if len(doc) == 0:
             db = dbClient.Tornado
             db.account.insert({
                 'username': username,
@@ -161,7 +208,7 @@ class GoeasyHandler(tornado.web.RequestHandler):
     def get(self):
         username = self.get_argument('username', None)
         no = self.get_argument('no', None)
-        self.no_handler(no,username)
+        self.no_handler(no, username)
 
     @staticmethod
     def no_handler(no: str, username: str):
@@ -197,7 +244,8 @@ if __name__ == '__main__':
             (r'/login', LogInHandler),
             (r'/logout', LogOutHandler),
             (r'/signup', SignUpHandler),
-            (r'/goeasy', GoeasyHandler)
+            (r'/goeasy', GoeasyHandler),
+            (r'/equipment',EquipmentHandler)
         ],
         **settings
     )
