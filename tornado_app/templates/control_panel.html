@@ -12,6 +12,8 @@
         /*}*/
     </style>
     <script type="text/javascript">
+        var ws=new WebSocket("ws://localhost:9999/chat");
+
         function get_xsrf() {
             return $("input[name='_xsrf']").val();
         }
@@ -20,7 +22,7 @@
             var no = $("#new-no").val();
             var _xsrf=get_xsrf();
             $.post("/equipment", {'no':no, 'action':'add','_xsrf':_xsrf}, function (data, status) {
-                if(status == 'success'){
+                if(status === 'success'){
                     $("#result").html(data);
                     query_and_show();
                 }
@@ -30,19 +32,29 @@
             });
 
         }
-        function led_handler(no) {
-            $("#action-msg").html(no+' trigger');
 
+        function led_handler(no) {
+            var id=no.replace('.','-');
+            if($("#"+id).is(":checked")){
+                $("#action-msg").html('turn ' +no+' on');
+            }
+            else{
+                $("#action-msg").html('turn ' +no+' off');
+            }
         }
+
         function query_and_show_led() {
             $.post("/equipment", {'action':'query','_xsrf':get_xsrf(),'kind':'led'},function (data, status) {
-                if (status == 'success') {
+                if (status === 'success') {
                     data = JSON.parse(data);
                     var html='';
                     for(var l in data){
                         html+='<li>'
                             +JSON.stringify(data[l])
-                            +'<input type="checkbox" class="led-check" onclick="led_handler('+string(data[l]["no"])+')">'
+                            +'<input type="checkbox" class="led-check" '
+                                + 'onclick="led_handler(\''+data[l]["no"].toString()+'\')"'
+                                + 'id="'+data[l]["no"].toString().replace('.','-')+'"'
+                                +'>'
                             +'</li>';
                     }
                     $("#led_box").html(html);
@@ -53,8 +65,48 @@
             query_and_show_led();
         }
 
+        function drop_all() {
+            $.post("/equipment", {'action':'drop_all','_xsrf':get_xsrf()},function (data, status) {
+                if (status === 'success') {
+                    $("#result").html('drop all success');
+                    query_and_show();
+                }
+                else{
+                    alert('Ajax失败');
+                }
+            });
+        }
+
+        function register() {
+            var data={
+                'action':'register'
+            };
+            ws.send(JSON.stringify(data));
+        }
+
+        function ws_talk(){
+            var data={
+                'action':'push',
+                'data':{
+                    'msg':$("#group-talk").val()
+                }
+            };
+            ws.send(JSON.stringify(data));
+        }
+
+        ws.onmessage = function (event) {
+            var data=$.parseJSON(event["data"]);
+            if (data['data'] === undefined) {
+                $("#talk-window").html(data['message']);
+            }
+            else{
+                $("#talk-window").html(data['data']['msg']);
+            }
+        };
+
         $(document).ready(function () {
             query_and_show();
+            register();
         })
     </script>
 </head>
@@ -70,7 +122,12 @@
         {% raw xsrf_form_html() %}
         <input id="new-no">
         <button id="new-button" onclick="add_new()">ADD NEW!</button>
+        <button id="drop-all" onclick="drop_all()">DROP ALL!</button>
         <p id="result"></p>
+        <input id="group-talk">
+        <button id="group-talk-button" onclick="ws_talk()">SEND</button>
+        <p id="talk-window"></p>
+
     </div>
     <br>
     <div>

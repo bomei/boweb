@@ -35,7 +35,7 @@
 </div>
 </body>
 <script type="text/javascript" charset="utf-8">
-    var ws=new WebSocket("ws://zannb.site/chat");
+    var ws=new WebSocket("ws://localhost:9999/chat");
     ws.onmessage = function(event) {
         console.log(typeof(event["data"]));
         var data=$.parseJSON(event["data"]);

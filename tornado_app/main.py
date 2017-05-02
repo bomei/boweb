@@ -8,6 +8,7 @@ import tornado.ioloop
 import tornado.template
 import motor
 import json
+from tornado.httpclient import AsyncHTTPClient
 
 # conn = pymongo.MongoClient(host='zannb.site', port=27017)
 dbClient = motor.motor_tornado.MotorClient('zannb.site', 27017)
@@ -16,6 +17,9 @@ dbClient = motor.motor_tornado.MotorClient('zannb.site', 27017)
 class BaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
         return self.get_secure_cookie('username')
+
+    def get_current_xsrf(self):
+        return self.get_secure_cookie('_xsrf')
 
 
 class IndexHandler(BaseHandler):
@@ -42,13 +46,13 @@ class EquipmentHandler(BaseHandler):
                 r = await self.add_new_to_user(no, user)
                 if r == 'success':
                     self.write('add {} to {} success'.format(no, user))
-                elif r=='used':
+                elif r == 'used':
                     self.write('{} has been activated'.format(no))
 
             elif action == 'query':
-                kind=self.get_argument('kind')
-                cursor = db[user].find({'kind':kind})
-                doc=await cursor.to_list(None)
+                kind = self.get_argument('kind')
+                cursor = db[user].find({'kind': kind})
+                doc = await cursor.to_list(None)
                 if len(doc) > 0:
                     for each in doc:
                         each.pop('_id')
@@ -56,8 +60,12 @@ class EquipmentHandler(BaseHandler):
                 else:
                     self.write('No')
 
+            elif action == 'drop_all':
+                db[user].drop()
+                db.equipment.remove({'user': user})
+
     async def add_new_to_user(self, no, user):
-        user = user if isinstance(user,str) else user.decode()
+        user = user if isinstance(user, str) else user.decode()
         db = dbClient.Tornado
         cursor = db.equipment.find({'no': no})
         doc = await cursor.to_list(None)
@@ -65,30 +73,41 @@ class EquipmentHandler(BaseHandler):
             db.equipment.insert({
                 'no': no,
                 'user': user,
-                'kind':no.split('.')[0]
+                'kind': no.split('.')[0]
             })
             db[user].insert({
                 'no': no,
                 'symbol': 'equipments',
                 'kind': no.split('.')[0]
             })
+            post_data = {
+                'action': 'add',
+                'user': user,
+                'no': no,
+                '_xsrf':self.get_current_xsrf()
+            }
+            import urllib.parse, requests
+
+            body = urllib.parse.urlencode(post_data)
+            AsyncHTTPClient().fetch('http://localhost:9999/chat', method='POST', body=body)
             return 'success'
         else:
             return 'used'
 
+    def on_chat_response(self):
+        pass
+
 
 class SignUpHandler(BaseHandler):
-    @tornado.gen.coroutine
     def get(self):
         self.render('signup.html', username_used=False)
 
-    @tornado.gen.coroutine
-    def post(self):
+    async def post(self):
         username = self.get_argument("username")
         password1 = self.get_argument("password1")
         password2 = self.get_argument("password2")
         cursor = dbClient.Tornado.account.find({'username': username})
-        doc = yield cursor.to_list(None)
+        doc = await cursor.to_list(None)
         if len(doc) == 0:
             db = dbClient.Tornado
             db.account.insert({
@@ -104,14 +123,13 @@ class LogInHandler(BaseHandler):
     def get(self):
         self.render('login.html')
 
-    @tornado.gen.coroutine
-    def post(self):
+    async def post(self):
         username = self.get_argument("username")
         password = self.get_argument("password")
         db = dbClient.Tornado
         cursor = db.account.find({"username": username})
         try:
-            for result in (yield cursor.to_list(length=10)):
+            for result in (await cursor.to_list(length=10)):
                 if result['password'] == password:
                     self.set_secure_cookie('username', username)
                     self.redirect("/")
@@ -151,75 +169,127 @@ class ControlPanelHandler(BaseHandler):
         self.render("control_panel.html")
 
 
-class SocketHandler(tornado.websocket.WebSocketHandler):
+class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
     """docstring for SocketHandler"""
-    clients = set()
+    clients_all = set()
+    clients_group = dict()
+    clients_no = dict()
+
+    def add_to_group(self,group):
+        if group not in SocketHandler.clients_group:
+            SocketHandler.clients_group[group]=set()
+        SocketHandler.clients_group[group].add(self)
+
+    async def client_refresh(self, no=None):
+        if no is not None:
+            cursor = dbClient.Tornado.equipment.find({'no': no})
+            doc = await cursor.to_list(None)
+            if len(doc) > 0:
+                doc = doc[0]
+                user=doc['user']
+                if user not in SocketHandler.clients_group:
+                    SocketHandler.clients_group[user]=set()
+                SocketHandler.clients_group[user].add(self)
+                return
+
+    def post(self):
+        action = self.get_argument('action', None)
+        if action is not None:
+            user = self.get_argument('user')
+            no = self.get_argument('no')
+
+            if action == 'add':
+                if user not in SocketHandler.clients_group:
+                    SocketHandler.clients_group[user] = set()
+                if no in SocketHandler.clients_no:
+                    SocketHandler.clients_group[user].add(SocketHandler.clients_no[no])
 
     def check_origin(self, origin):
         return True
 
     @staticmethod
+    def send_to_group(group, message):
+        for c in SocketHandler.clients_group[group]:
+            c.write_message(message)
+
+    @staticmethod
     def send_to_all(message):
-        for k, v in SocketHandler.clients.items():
-            for c in v:
-                c.write_message(json.dumps(message))
+        for c in SocketHandler.clients_all:
+            c.write_message(json.dumps(message))
 
     def register(self, newer):
         pass
 
     def open(self):
         self.write_message(json.dumps({
-            'type': 'sys',
+            'group': 'sys',
             'message': 'Welcome to WebSocket',
         }))
         SocketHandler.send_to_all({
-            'type': 'sys',
+            'group': 'sys',
             'message': str(id(self)) + ' has joined',
         })
-        SocketHandler.clients.add(self)
+        SocketHandler.clients_all.add(self)
 
     def on_close(self):
-        SocketHandler.clients.remove(self)
+        SocketHandler.clients_all.remove(self)
         SocketHandler.send_to_all({
-            'type': 'sys',
+            'group': 'sys',
             'message': str(id(self)) + ' has left',
         })
 
-    def on_message(self, message):
+    async def on_message(self, message):
         try:
             d_message = json.loads(message)
-        except json.decoder.JSONDecodeError:
-            d_message = message
-        if 'heartbeat' in d_message:
-            return
-        if 'send_ip' in d_message:
-            self.redirect('/myrasp?ip_message=' + message)
-            return
-        SocketHandler.send_to_all({
-            'type': 'user',
-            'id': id(self),
-            'message': message,
-        })
+            action = d_message['action']
 
-        # #MAIN
+            if action == 'heartbeat':
+                self.heartbeat_handler()
+                return
 
+            elif action == 'join':
+                data = d_message['data']
+                self.join_handler(data)
+                return
 
-class GoeasyHandler(tornado.web.RequestHandler):
-    def get(self):
-        username = self.get_argument('username', None)
-        no = self.get_argument('no', None)
-        self.no_handler(no, username)
+            elif action == 'register':
+                if 'no' in d_message:
+                    no = d_message['no']
+                    if no not in SocketHandler.clients_no:
+                        SocketHandler.clients_no[no] = self
+                    await self.client_refresh(no)
+                else:
+                    user=self.get_current_user().decode()
+                    self.add_to_group(user)
+                    return
 
-    @staticmethod
-    def no_handler(no: str, username: str):
-        if no is not None and username is not None:
-            if no.startswith('led'):
-                cursor = dbClient.Tornado[username]
-                cursor.insert({
-                    'kind': 'led',
-                    'no': no,
-                    'symbol': 'equipments'
+            elif action == 'push':
+                if 'group' not in d_message:
+                    d_message['group']=self.get_current_user().decode()
+                msg=d_message['data']['msg']
+                SocketHandler.send_to_group(d_message['group'],json.dumps(d_message))
+
+            else:
+                SocketHandler.send_to_all({
+                    'group': 'user',
+                    'id': id(self),
+                    'message': message,
                 })
+        except json.decoder.JSONDecodeError:
+            self.write_message('bad post message')
+            return
+        except KeyError:
+            return
+
+    def heartbeat_handler(self):
+        pass
+
+    def join_handler(self, data):
+        if 'direction_group' in data:
+            direction_group = data['direction_group']
+            if direction_group in SocketHandler.clients_group:
+                if self not in SocketHandler.clients_group[direction_group]:
+                    SocketHandler.clients_group[direction_group].add(self)
 
 
 if __name__ == '__main__':
@@ -227,7 +297,7 @@ if __name__ == '__main__':
         "template_path": os.path.join(os.path.dirname(__file__), "templates"),
         'static_path': os.path.join(os.path.dirname(__file__), "static"),
         "cookie_secret": "bobo=",
-        "xsrf_cookies": True,
+        "xsrf_cookies": False,
         "login_url": "/login",
         'debug': True,
         'autoreload': True
@@ -244,8 +314,7 @@ if __name__ == '__main__':
             (r'/login', LogInHandler),
             (r'/logout', LogOutHandler),
             (r'/signup', SignUpHandler),
-            (r'/goeasy', GoeasyHandler),
-            (r'/equipment',EquipmentHandler)
+            (r'/equipment', EquipmentHandler)
         ],
         **settings
     )
