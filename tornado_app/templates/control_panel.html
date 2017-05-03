@@ -79,7 +79,8 @@
 
         function register() {
             var data={
-                'action':'register'
+                'action':'register',
+                'group':'sys'
             };
             ws.send(JSON.stringify(data));
         }

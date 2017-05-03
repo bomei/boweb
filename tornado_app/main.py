@@ -233,6 +233,9 @@ class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
 
     def on_close(self):
         SocketHandler.clients_all.remove(self)
+        # TODO: 在客户端关闭后需要进行相应的删除，初步的计划是做一个dict, 记录所加入的群组
+        if self in SocketHandler.clients_no.values():
+            pass
         SocketHandler.send_to_all({
             'group': 'sys',
             'message': str(id(self)) + ' has left',
@@ -272,7 +275,7 @@ class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
 
             else:
                 SocketHandler.send_to_all({
-                    'group': 'user',
+                    'group': self.get_current_user().decode(),
                     'id': id(self),
                     'message': message,
                 })
