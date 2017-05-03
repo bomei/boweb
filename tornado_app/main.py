@@ -1,13 +1,13 @@
+import json
 import os
 
+import motor
 import tornado
-import tornado.web
 import tornado.gen
-import tornado.websocket
 import tornado.ioloop
 import tornado.template
-import motor
-import json
+import tornado.web
+import tornado.websocket
 from tornado.httpclient import AsyncHTTPClient
 
 # conn = pymongo.MongoClient(host='zannb.site', port=27017)
@@ -84,9 +84,9 @@ class EquipmentHandler(BaseHandler):
                 'action': 'add',
                 'user': user,
                 'no': no,
-                '_xsrf':self.get_current_xsrf()
+                '_xsrf': self.get_current_xsrf()
             }
-            import urllib.parse, requests
+            import urllib.parse
 
             body = urllib.parse.urlencode(post_data)
             AsyncHTTPClient().fetch('http://localhost:9999/chat', method='POST', body=body)
@@ -175,9 +175,9 @@ class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
     clients_group = dict()
     clients_no = dict()
 
-    def add_to_group(self,group):
+    def add_to_group(self, group):
         if group not in SocketHandler.clients_group:
-            SocketHandler.clients_group[group]=set()
+            SocketHandler.clients_group[group] = set()
         SocketHandler.clients_group[group].add(self)
 
     async def client_refresh(self, no=None):
@@ -186,9 +186,9 @@ class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
             doc = await cursor.to_list(None)
             if len(doc) > 0:
                 doc = doc[0]
-                user=doc['user']
+                user = doc['user']
                 if user not in SocketHandler.clients_group:
-                    SocketHandler.clients_group[user]=set()
+                    SocketHandler.clients_group[user] = set()
                 SocketHandler.clients_group[user].add(self)
                 return
 
@@ -263,15 +263,15 @@ class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
                         SocketHandler.clients_no[no] = self
                     yield self.client_refresh(no)
                 else:
-                    user=self.get_current_user().decode()
+                    user = self.get_current_user().decode()
                     self.add_to_group(user)
                     return
 
             elif action == 'push':
                 if 'group' not in d_message:
-                    d_message['group']=self.get_current_user().decode()
-                msg=d_message['data']['msg']
-                SocketHandler.send_to_group(d_message['group'],json.dumps(d_message))
+                    d_message['group'] = self.get_current_user().decode()
+                msg = d_message['data']['msg']
+                SocketHandler.send_to_group(d_message['group'], json.dumps(d_message))
 
             else:
                 SocketHandler.send_to_all({
