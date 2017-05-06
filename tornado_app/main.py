@@ -11,6 +11,8 @@ import json
 from tornado.httpclient import AsyncHTTPClient
 from tornado_app.base import BaseHandler, dbClient
 from tornado_app.socket_io import SocketIO
+
+
 # conn = pymongo.MongoClient(host='zannb.site', port=27017)
 
 
@@ -20,7 +22,7 @@ class IndexHandler(BaseHandler):
         log_in_already = False
         if self.get_secure_cookie('username'):
             log_in_already = True
-        username= self.get_current_user()
+        username = self.get_current_user()
         self.render("index.html", log_in_already=log_in_already, username=username)
 
 
@@ -78,7 +80,7 @@ class EquipmentHandler(BaseHandler):
                 'action': 'add',
                 'user': user,
                 'no': no,
-                '_xsrf':self.get_current_xsrf()
+                '_xsrf': self.get_current_xsrf()
             }
             import urllib.parse, requests
 
@@ -165,6 +167,7 @@ class ControlPanelHandler(BaseHandler):
 
 class SocketHandler(SocketIO):
     """docstring for SocketHandler"""
+
     def check_origin(self, origin):
         return True if origin is not None else False
 
