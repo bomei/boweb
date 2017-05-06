@@ -1,4 +1,3 @@
-from docopt import docopt
 from websocket import create_connection
 import json
 import threading
@@ -53,7 +52,7 @@ class BoClient:
 if __name__ == '__main__':
     config = {
         'ws_server': 'ws://localhost:9999/chat',
-        'no': 'client.bobono1'
+        'no': 'client.bo'
     }
     bc = BoClient(config)
     bc.run()
