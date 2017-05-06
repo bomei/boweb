@@ -5,18 +5,7 @@
     <link rel="icon" href="../static/favicon.ico" type="image/x-icon" />
     <link rel="shortcut icon" href="../static/favicon.ico" type="image/x-icon" />
     {% module Template('script_ref.html') %}
-    <script type="text/javascript" charset="utf-8">
-        var ws = new WebSocket("ws://zannb.site/chat");
-        ws.onmessage = function (event) {
-            console.log(event);
-        }
 
-        function send() {
-            ws.send(document.getElementById('chat').value);
-        }
-
-
-    </script>
 </head>
 <body>
     <div>
@@ -30,8 +19,8 @@
             </p>
             <p>Password:<br>
                 <input name="password" type="text" value="Password"
-                       onfocus="if(value=='Email/Username'){value=''}"
-                       onblur="if(value==''){value='Email/Username'}">
+                       onfocus="if(value=='Password'){value=''}"
+                       onblur="if(value==''){value='Password'}">
             </p>
             <input type="submit" value="LOG IN">
         </form>

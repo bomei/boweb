@@ -5,7 +5,7 @@ import threading
 import time
 
 
-class BoClient():
+class BoClient:
     def __init__(self, config):
         self.config = config
         self.ws = create_connection(config['ws_server'])
@@ -25,10 +25,8 @@ class BoClient():
 
     def register(self):
         msg = {
-            'group': 'sys',
             'no': self.no,
             'action': 'register',
-            'data': {}
         }
         msg = json.dumps(msg)
         self.ws.send(msg)
@@ -37,12 +35,10 @@ class BoClient():
         while 1:
             s = input()
             data = {
-                'group': 'bobo',
+                'group': 'ass',
                 'no': self.no,
                 'action': 'push',
-                'data': {
-                    'msg': s
-                }
+                'msg': s
             }
             self.ws.send(json.dumps(data))
 

@@ -6,20 +6,13 @@ import tornado.gen
 import tornado.websocket
 import tornado.ioloop
 import tornado.template
-import motor
+
 import json
 from tornado.httpclient import AsyncHTTPClient
-
+from tornado_app.base import BaseHandler, dbClient
+from tornado_app.socket_io import SocketIO
 # conn = pymongo.MongoClient(host='zannb.site', port=27017)
-dbClient = motor.motor_tornado.MotorClient('zannb.site', 27017)
 
-
-class BaseHandler(tornado.web.RequestHandler):
-    def get_current_user(self):
-        return self.get_secure_cookie('username')
-
-    def get_current_xsrf(self):
-        return self.get_secure_cookie('_xsrf')
 
 
 class IndexHandler(BaseHandler):
@@ -27,7 +20,8 @@ class IndexHandler(BaseHandler):
         log_in_already = False
         if self.get_secure_cookie('username'):
             log_in_already = True
-        self.render("index.html", log_in_already=log_in_already)
+        username= self.get_current_user()
+        self.render("index.html", log_in_already=log_in_already, username=username)
 
 
 class UserHandler(BaseHandler):
@@ -166,131 +160,13 @@ class ShowIPHandler(tornado.websocket.WebSocketHandler):
 class ControlPanelHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        self.render("control_panel.html")
+        self.render("control_panel.html", username=self.get_current_user())
 
 
-class SocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
+class SocketHandler(SocketIO):
     """docstring for SocketHandler"""
-    clients_all = set()
-    clients_group = dict()
-    clients_no = dict()
-
-    def add_to_group(self,group):
-        if group not in SocketHandler.clients_group:
-            SocketHandler.clients_group[group]=set()
-        SocketHandler.clients_group[group].add(self)
-
-    async def client_refresh(self, no=None):
-        if no is not None:
-            cursor = dbClient.Tornado.equipment.find({'no': no})
-            doc = await cursor.to_list(None)
-            if len(doc) > 0:
-                doc = doc[0]
-                user=doc['user']
-                if user not in SocketHandler.clients_group:
-                    SocketHandler.clients_group[user]=set()
-                SocketHandler.clients_group[user].add(self)
-                return
-
-    def post(self):
-        action = self.get_argument('action', None)
-        if action is not None:
-            user = self.get_argument('user')
-            no = self.get_argument('no')
-
-            if action == 'add':
-                if user not in SocketHandler.clients_group:
-                    SocketHandler.clients_group[user] = set()
-                if no in SocketHandler.clients_no:
-                    SocketHandler.clients_group[user].add(SocketHandler.clients_no[no])
-
     def check_origin(self, origin):
-        return True
-
-    @staticmethod
-    def send_to_group(group, message):
-        for c in SocketHandler.clients_group[group]:
-            c.write_message(message)
-
-    @staticmethod
-    def send_to_all(message):
-        for c in SocketHandler.clients_all:
-            c.write_message(json.dumps(message))
-
-    def register(self, newer):
-        pass
-
-    def open(self):
-        self.write_message(json.dumps({
-            'group': 'sys',
-            'message': 'Welcome to WebSocket',
-        }))
-        SocketHandler.send_to_all({
-            'group': 'sys',
-            'message': str(id(self)) + ' has joined',
-        })
-        SocketHandler.clients_all.add(self)
-
-    def on_close(self):
-        SocketHandler.clients_all.remove(self)
-        SocketHandler.send_to_all({
-            'group': 'sys',
-            'message': str(id(self)) + ' has left',
-        })
-
-    @tornado.gen.coroutine
-    def on_message(self, message):
-        try:
-            d_message = json.loads(message)
-            action = d_message['action']
-
-            if action == 'heartbeat':
-                self.heartbeat_handler()
-                return
-
-            elif action == 'join':
-                data = d_message['data']
-                self.join_handler(data)
-                return
-
-            elif action == 'register':
-                if 'no' in d_message:
-                    no = d_message['no']
-                    if no not in SocketHandler.clients_no:
-                        SocketHandler.clients_no[no] = self
-                    yield self.client_refresh(no)
-                else:
-                    user=self.get_current_user().decode()
-                    self.add_to_group(user)
-                    return
-
-            elif action == 'push':
-                if 'group' not in d_message:
-                    d_message['group']=self.get_current_user().decode()
-                msg=d_message['data']['msg']
-                SocketHandler.send_to_group(d_message['group'],json.dumps(d_message))
-
-            else:
-                SocketHandler.send_to_all({
-                    'group': 'user',
-                    'id': id(self),
-                    'message': message,
-                })
-        except json.decoder.JSONDecodeError:
-            self.write_message('bad post message')
-            return
-        except KeyError:
-            return
-
-    def heartbeat_handler(self):
-        pass
-
-    def join_handler(self, data):
-        if 'direction_group' in data:
-            direction_group = data['direction_group']
-            if direction_group in SocketHandler.clients_group:
-                if self not in SocketHandler.clients_group[direction_group]:
-                    SocketHandler.clients_group[direction_group].add(self)
+        return True if origin is not None else False
 
 
 if __name__ == '__main__':
