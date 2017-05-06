@@ -1,4 +1,11 @@
+from __future__ import absolute_import, division, print_function
+
+#
 import os
+# import sys
+#
+# d=os.getcwd()
+# sys.path.append(d)
 
 import tornado
 import tornado.web
@@ -9,12 +16,12 @@ import tornado.template
 
 import json
 from tornado.httpclient import AsyncHTTPClient
-from tornado_app.base import BaseHandler, dbClient
-from tornado_app.socket_io import SocketIO
+
+from base import BaseHandler, dbClient
+from socket_io import SocketIO
 
 
 # conn = pymongo.MongoClient(host='zannb.site', port=27017)
-
 
 
 class IndexHandler(BaseHandler):

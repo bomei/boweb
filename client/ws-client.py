@@ -18,7 +18,7 @@ class BoClient:
     def heartbeat(self):
         while 1:
             time.sleep(5)
-            data = {'heartbeat': True}
+            data = {'action':'heartbeat'}
             data = json.dumps(data)
             self.ws.send(data)
 
@@ -34,7 +34,7 @@ class BoClient:
         while 1:
             s = input()
             data = {
-                'group': 'ass',
+                'group': 'bobo',
                 'no': self.no,
                 'action': 'push',
                 'msg': s
@@ -47,12 +47,14 @@ class BoClient:
         t_tx=threading.Thread(target=self.tx)
         t_tx.start()
         self.register()
+        t_heartbeat=threading.Thread(target=self.heartbeat)
+        t_heartbeat.start()
 
 
 if __name__ == '__main__':
     config = {
-        'ws_server': 'ws://localhost:9999/chat',
-        'no': 'client.bo'
+        'ws_server': 'ws://zannb.site/chat',
+        'no': 'client.bobono'
     }
     bc = BoClient(config)
     bc.run()
