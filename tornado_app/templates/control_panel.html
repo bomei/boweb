@@ -14,7 +14,7 @@
     <script type="text/javascript">
         var ws=new WebSocket("ws://zannb.site/chat");
 
-        function heartbead() {
+        function heartbeat() {
             var data={
                 'action':'heartbeat'
             };
@@ -23,7 +23,7 @@
 
         ws.onopen=function (e) {
             register();
-            setInterval(heartbead(),5000);
+            setInterval("heartbeat()",5000);
         };
         
         function get_xsrf() {
@@ -69,18 +69,20 @@
         function query_and_show_led() {
             $.post("/equipment", {'action':'query','_xsrf':get_xsrf(),'kind':'led'},function (data, status) {
                 if (status === 'success') {
-                    data = JSON.parse(data);
-                    var html='';
-                    for(var l in data){
-                        html+='<li>'
-                            +JSON.stringify(data[l])
-                            +'<input type="checkbox" class="led-check" '
-                                + 'onclick="led_handler(\''+data[l]["no"].toString()+'\')"'
-                                + 'id="'+data[l]["no"].toString().replace('.','-')+'"'
-                                +'>'
-                            +'</li>';
+                    if(data !== 'No') {
+                        data = JSON.parse(data);
+                        var html = '';
+                        for (var l in data) {
+                            html += '<li>'
+                                + JSON.stringify(data[l])
+                                + '<input type="checkbox" class="led-check" '
+                                + 'onclick="led_handler(\'' + data[l]["no"].toString() + '\')"'
+                                + 'id="' + data[l]["no"].toString().replace('.', '-') + '"'
+                                + '>'
+                                + '</li>';
+                        }
+                        $("#led_box").html(html);
                     }
-                    $("#led_box").html(html);
                 }
             });
         }
@@ -88,14 +90,16 @@
         function query_and_show_client() {
             $.post("/equipment", {'action':'query','_xsrf':get_xsrf(),'kind':'client'},function (data, status) {
                 if (status === 'success') {
-                    data = JSON.parse(data);
-                    var html='';
-                    data.forEach( function(line){
-                        html+='<li>'
-                            +JSON.stringify(line)
-                            +'</li>';
-                    });
-                    $("#rasp_box").html(html);
+                    if (data !== 'No') {
+                        data = JSON.parse(data);
+                        var html = '';
+                        data.forEach(function (line) {
+                            html += '<li>'
+                                + JSON.stringify(line)
+                                + '</li>';
+                        });
+                        $("#rasp_box").html(html);
+                    }
                 }
             });
         }

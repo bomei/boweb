@@ -17,9 +17,3 @@ class BaseHandler(tornado.web.RequestHandler):
     async def db_login(c, db, username, pwd):
         await c[db].authenticate(username, pwd)
 
-    @staticmethod
-    async def init():
-        # asyncio.ensure_future(BaseHandler.db_login(dbClient, 'Tornado', 'tornado', 'tornado:mongo'))
-        # asyncio.ensure_future(BaseHandler.db_login(dbClient,'admin','bobo','bobo:mongo'))
-        await BaseHandler.db_login(dbClient, 'Tornado', 'tornado', 'tornado:mongo')
-        await BaseHandler.db_login(dbClient, 'admin', 'bobo', 'bobo:mongo')
