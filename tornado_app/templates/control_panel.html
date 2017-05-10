@@ -13,9 +13,17 @@
     </style>
     <script type="text/javascript">
         var ws=new WebSocket("ws://zannb.site/chat");
-        
+
+        function heartbead() {
+            var data={
+                'action':'heartbeat'
+            };
+            ws.send(JSON.stringify(data))
+        }
+
         ws.onopen=function (e) {
             register();
+            setInterval(heartbead(),5000);
         };
         
         function get_xsrf() {
