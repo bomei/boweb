@@ -12,7 +12,7 @@
         /*}*/
     </style>
     <script type="text/javascript">
-        var ws=new WebSocket("ws://zannb.site/chat");
+        var ws=new WebSocket("ws://localhost:9999/chat");
 
         function heartbeat() {
             var data={
@@ -51,16 +51,16 @@
             if($("#"+id).is(":checked")){
                 $("#action-msg").html('turn ' +no+' on');
                 data={
-                    'action':'push',
-                    'msg':no+'-on'
+                    'action':'turn',
+                    'msg':no+'.on'
                 };
                 ws.send(JSON.stringify(data));
             }
             else{
                 $("#action-msg").html('turn ' +no+' off');
                 data={
-                    'action':'push',
-                    'msg':no+'-off'
+                    'action':'turn',
+                    'msg':no+'.off'
                 };
                 ws.send(JSON.stringify(data));
             }
@@ -73,6 +73,7 @@
                         data = JSON.parse(data);
                         var html = '';
                         for (var l in data) {
+                            delete data[l]['symbol'];
                             html += '<li>'
                                 + JSON.stringify(data[l])
                                 + '<input type="checkbox" class="led-check" '
@@ -94,6 +95,7 @@
                         data = JSON.parse(data);
                         var html = '';
                         data.forEach(function (line) {
+                            delete line['symbol'];
                             html += '<li>'
                                 + JSON.stringify(line)
                                 + '</li>';

@@ -38,9 +38,15 @@
     <h2>Sign UP</h2>
     <form  method="post" action="/signup">
         {% raw xsrf_form_html() %}
-        <p>Username:<br><input  name="username" type="text" value="Email/Username"></p>
-        <p>Password:<br><input id="pwd1" name="password1" type="password" value="text"></p>
-        <p>Password again:<br><input id="pwd2" name="password2" type="password" value="text" onkeyup="validate()"></p>
+        <p>Username:<br><input  name="username" type="text" value="Email/Username"
+                                onfocus="if(value=='Email/Username'){value=''}"
+                                onblur="if(value==''){value='Email/Username'}"></p>
+        <p>Password:<br><input id="pwd1" name="password1" type="password" value="text"
+                               onfocus="if(value=='text'){value=''}"
+                               onblur="if(value==''){value='Email/Username'}"></p>
+        <p>Password again:<br><input id="pwd2" name="password2" type="password" value="text" onkeyup="validate()"
+                                     onfocus="if(value=='text'){value=''}"
+                                     onblur="if(value==''){value='Email/Username'}"></p>
         <p id="suggestion"></p>
         <input type="submit" id="submit" value="SIGN UP">
     </form>

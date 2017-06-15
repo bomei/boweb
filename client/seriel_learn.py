@@ -15,9 +15,10 @@ class SerialClient:
 
         self.serial1 = serial.Serial(
             # port='com4',
-            port=self.port,
+            port='/dev/ttyUSB0',
             baudrate=9600
         )
+
     def rx(self):
         while 1:
             time.sleep(0.1)
@@ -41,6 +42,7 @@ class SerialClient:
 
     def tx(self, msg):
         if len(msg) > 0:
+            print('in sc.tx, msg'.format(msg))
             # 不知道为什么这里要加上\r\n才能正常地返回
             msg += '\r\n'
             msg = msg.encode()
@@ -50,5 +52,10 @@ class SerialClient:
             print(data)
             print(self.serial1.write(data))
 
-
+if __name__ == '__main__':
+    config={
+        'serial_port':'com3'
+    }
+    sc = SerialClient(config)
+    sc.run()
 

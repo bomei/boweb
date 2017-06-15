@@ -1,6 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
-
 import json
 import tornado.websocket
 import tornado.gen
@@ -108,6 +105,7 @@ class SocketIO(tornado.websocket.WebSocketHandler, BaseHandler):
 
     @tornado.gen.coroutine
     def on_message(self, message):
+        print(message)
         try:
             d_message = json.loads(message)
             action = d_message['action']
