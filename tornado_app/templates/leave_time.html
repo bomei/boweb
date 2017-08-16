@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="https://ss1.bdstatic.com/5eN1bjq8AAUYm2zgoY3K/r/www/cache/static/protocol/https/jquery/jquery-1.10.2.min_65682a2.js"></script>
+    <title>小猪仔离开的日子</title>
+    <script type="text/javascript">
+        function main() {
+            single();
+            setInterval(function(){single()},1000);
+        }
+
+        function single() {
+            console.log('single once');
+            var init_time = new Date('2017/08/12 07:50:00');
+
+            var cur_time = new Date();
+            var s_delta = (cur_time-init_time)/1000;
+            $("#TOL").html(init_time.toLocaleString());
+            $("#TOL_s").html(Math.ceil(s_delta));
+            $("#TOL_m").html(Math.ceil(s_delta/60));
+            $("#TOL_h").html(Math.ceil(s_delta/3600));
+            $("#TOL_d").html(Math.ceil(s_delta/3600/24));
+        }
+
+        $(document).ready(function () {
+            main();
+        })
+    </script>
+</head>
+<body>
+    <p>
+        小猪仔离开时间：
+        <span id="TOL" class="big_time"></span>
+    </p>
+    <p>
+        小猪仔离开的第
+        <span id="TOL_d" class="big_time"></span>
+        天
+    </p>
+    <p>
+        小猪仔离开的第
+        <span id="TOL_h" class="big_time"></span>
+        个小时
+    </p>
+    <p>
+        小猪仔离开的第
+        <span id="TOL_m" class="big_time"></span>
+        分钟
+    </p>
+    <p>
+        小猪仔离开的第
+        <span id="TOL_s" class="big_time"></span>
+        秒
+    </p>
+</body>
+</html>
